@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Le Dominiksz Slot</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@600;700;900&display=swap">
+
+  <style>
+    :root{
+      --bg:#0f0d13;
+      --hud-bg: rgba(40,34,28,.92);
+      --panel-bg:#1e1c1a;
+      --btn:#222;
+      --text:#fff;
+      --muted:#bcb7b0;
+      --accent:#f5d26a;
+      --border:#0008;
+    }
+
+    *{box-sizing:border-box;margin:0;padding:0}
+    :not(input):not(textarea){-webkit-user-select:none;user-select:none;-ms-user-select:none}
+    img,svg{-webkit-user-drag:none;}
+    button{background:none;border:none;padding:0}
+
+    html,body{
+      width:100%;height:100%;overflow:hidden;
+      background:var(--bg);color:var(--text);
+      font-family:Inter,system-ui,sans-serif;
+    }
+
+    .wrap{
+      width:100vw;height:100vh;position:relative;overflow:hidden;margin:0 auto;
+      border-radius:12px;background:#000;
+      box-shadow:0 30px 80px #0009, inset 0 0 0 1px var(--border);
+    }
+
+    .machine{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;}
+    #reelsCanvasHost{position:absolute;inset:0;z-index:0;}
+    #reelsCanvasHost canvas{width:100%;height:100%;display:block;}
+
+    /* HUD */
+    .hudbar{
+      position:absolute;left:50%;transform:translateX(-50%);
+      bottom:0;height:80px;z-index:50;
+      width:min(980px,92vw);
+      display:flex;align-items:center;justify-content:space-between;gap:14px;
+      padding:0 16px;background:var(--hud-bg);
+      border-top:1px solid #0006;border-radius:10px 10px 0 0;
+    }
+    .hud-left,.hud-right{display:flex;align-items:center;gap:14px}
+
+    .hud-menu{
+      width:44px;height:44px;border-radius:8px;
+      background:#25211e;border:1px solid #000;display:grid;place-items:center;color:#eee;
+      box-shadow:inset 0 0 0 2px #0005;font-weight:900;font-size:18px;cursor:pointer;
+    }
+
+    .panel{
+      min-width:260px;height:56px;padding:10px 14px;border-radius:8px;
+      background:#1f1c19;border:1px solid #2b2a31;display:flex;flex-direction:column;justify-content:center;
+    }
+    .label{font:700 10px/1 Inter;color:var(--muted);letter-spacing:.5px}
+    .value{font:900 22px/1 Inter;color:#fff;margin-top:4px}
+
+    .bet-panel{
+      display:flex;align-items:center;gap:12px;
+      background:#1f1c19;border:1px solid #2b2a31;border-radius:8px;height:56px;padding:10px 12px;
+    }
+    .bet-stack{display:flex;flex-direction:column}
+    .bet-arrows{display:flex;flex-direction:column;gap:8px;margin-left:6px}
+    .arrow{
+      width:28px;height:22px;border-radius:6px;background:#25211e;border:1px solid #000;cursor:pointer;
+      display:grid;place-items:center;box-shadow:inset 0 0 0 2px #0005;
+    }
+    .arrow:active{transform:translateY(1px)}
+    .arrow svg{width:14px;height:14px;fill:#eee}
+
+    .spin-wrap{display:flex;align-items:center;gap:8px}
+    .spin-btn{
+      width:72px;height:72px;border-radius:50%;position:relative;cursor:pointer;
+      background:#161417;border:1px solid #000;display:grid;place-items:center;
+      box-shadow:inset 0 0 0 8px #2b2621, 0 10px 28px #0006;
+    }
+    .spin-btn:active{transform:translateY(1px)}
+    .spin-icon{width:34px;height:34px;display:block}
+    .spin-icon path{fill:#fff}
+
+    .auto-btn{
+      width:34px;height:34px;border-radius:50%;background:#25211e;border:1px solid #000;display:grid;place-items:center;cursor:pointer;
+      box-shadow:inset 0 0 0 2px #0005;
+    }
+    .auto-btn svg{width:16px;height:16px;fill:#fff}
+
+    /* Autoplay overlay (marad) */
+    .overlay{position:absolute;inset:0;display:none;align-items:center;justify-content:center;z-index:100;}
+    .overlay.active{display:flex;}
+    .shade{position:absolute;inset:0;background:#000a;}
+    .auto-panel{position:relative;z-index:2;width:360px;padding:20px;border-radius:12px;
+      background:#1c1b22;border:1px solid #333;box-shadow:0 8px 30px #000c;}
+    .auto-head{font:700 12px/1 Inter;color:#fffb;margin-bottom:10px;}
+    .pill-row{display:flex;flex-wrap:wrap;gap:10px;}
+    .pill{padding:10px 18px;border-radius:20px;background:#3c3b41;color:#fff;font:900 14px/1 Inter;cursor:pointer;}
+    .pill.active{background:var(--accent);color:#111;}
+    .auto-actions{margin-top:20px;display:flex;justify-content:flex-end;gap:10px;}
+    .btn{padding:10px 18px;border-radius:8px;background:#333;color:#fff;border:none;cursor:pointer;}
+    .btn.primary{background:var(--accent);color:#111;}
+    .close-x{position:absolute;right:12px;top:10px;width:36px;height:36px;border-radius:8px;display:grid;place-items:center;background:#1a1a1f;cursor:pointer;}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="machine">
+      <div id="reelsCanvasHost"></div>
+    </div>
+
+    <!-- HUD -->
+    <div class="hudbar" id="hudBar">
+      <div class="hud-left">
+        <div class="hud-menu" id="hudMenu" aria-label="Menu">≡</div>
+        <div class="panel">
+          <div class="label">DEMO BALANCE</div>
+          <div class="value" id="balanceValue">€10,000.00</div>
+        </div>
+      </div>
+
+      <div class="hud-right">
+        <div class="bet-panel">
+          <div class="bet-stack">
+            <div class="label">DEMO BET</div>
+            <div class="value" id="betValue">€2.00</div>
+          </div>
+          <div class="bet-arrows">
+            <button class="arrow" id="betUp" title="Bet +">
+              <svg viewBox="0 0 24 24"><path d="M7 14l5-5 5 5z"/></svg>
+            </button>
+            <button class="arrow" id="betDown" title="Bet -">
+              <svg viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="spin-wrap">
+          <button class="spin-btn" id="btnSpin" title="Spin" aria-label="Spin">
+            <svg class="spin-icon" viewBox="0 0 24 24"><path d="M12 4v2a6 6 0 1 1-6 6H4c0 4.418 3.582 8 8 8s8-3.582 8-8-3.582-8-8-8z"/></svg>
+          </button>
+          <button class="auto-btn" id="btnAuto" title="Auto" aria-label="Auto">
+            <svg viewBox="0 0 24 24"><path d="M12 20c4.418 0 8-3.582 8-8s-3.582-8-8-8"/><circle cx="12" cy="12" r="1.5"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Autoplay overlay -->
+    <div class="overlay" id="autoOverlay" aria-hidden="true">
+      <div class="shade" id="autoShade"></div>
+      <div class="auto-panel" role="dialog" aria-modal="true">
+        <div class="close-x" id="autoClose"><span>✕</span></div>
+        <div class="auto-head">NUMBER OF ROUNDS</div>
+        <div class="pill-row" id="pillRow"></div>
+        <div class="auto-actions">
+          <button class="btn" id="autoCancel">Cancel</button>
+          <button class="btn primary" id="autoStart">Start</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pixi + GSAP -->
+  <script src="https://pixijs.download/release/pixi.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+  <script src="slot.js"></script>
+</body>
+</html>
